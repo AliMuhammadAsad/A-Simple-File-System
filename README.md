@@ -1,9 +1,13 @@
 # A Simple(UNIX Based) File System
 
-This program was made on receiving the homework assignment for the course CS232 Operating Systems. The program would create a snapshot of the file system in a file ```myfs``` (my file system), having support for some simple commands. Since a snapshot is being created, the ```myfs``` would retain any data written onto it - simulating an actual hard disk.
+This program was made on receiving the homework assignment for the course ```CS232 Operating Systems``` The program would create a snapshot of the file system in a file ```myfs``` (my file system), having support for some simple commands. Since a snapshot is being created, the ```myfs``` would retain any data written onto it - simulating an actual hard disk.
 
 ## Compilation:
 The accompanying ```makefile``` has commands for compiling the C file and running the output file. 
+* ```make backup``` - creates a backup file - implemented due to ungodly events resulting in deletion of filesystem
+* ```make build``` - compiles the file system
+* ```make run``` - executes the implemented file system
+* ```make clean``` - removes the ```myfs.out``` and ```myfs``` file
 
 It can also be compiled by ```gcc filesystem.c -o myfs.out``` and run using ```./myfs.out sampleinput.txt```. If you want to test it with any other file, then simple replace the ```sampleinput.txt``` file with your filename. 
 
