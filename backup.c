@@ -41,8 +41,6 @@
  *  |       block   |inode0|inode1|   .... |inode15|
  *  |        list   |      |      |        |       |
  *  |_______________|______|______|________|_______|
- *
- *
  */
 
 
@@ -115,8 +113,6 @@ int init(){
     return myfs;
 }
 
-
-
 // ------------------------------ Functions Prototyping ------------------------------  //
 // 1. create file
 // 2. remove/delete file
@@ -182,7 +178,7 @@ int findParentInode(char* filename){
         read(myfs, (char*)&parent_inode, sizeof(struct inode));
         int dirsize = parent_inode.size;
         int found = 0;
-        for(int i = 0; i < dirsize; i++){
+        for(int i = 0; i < dirsize; i += sizeof(struct dirent)){
             lseek(myfs, BLOCK_SIZE * parent_inode.blockptrs[0] + i, SEEK_SET);
             read(myfs, (char*)&curr_entry, sizeof(struct dirent));
             if(strcmp(curr_entry.name, directory) == 0){
@@ -202,6 +198,42 @@ int findParentInode(char* filename){
     return directory_inode;
 }
 
+int assassin(char* filename, int directory_inode, int node, int dir){
+    // searches for the given path/filename/dirname then writes it into a directory if not found
+    struct inode parent_inode;
+    struct dirent curr_entry;
+
+    lseek(myfs, BLOCK_SIZE + directory_inode * sizeof(struct inode), SEEK_SET);
+    read(myfs, (char*)&parent_inode, sizeof(struct inode));
+    int size = parent_inode.size;
+    int blockOff = parent_inode.blockptrs[0];
+    for(int i = 0; i < size; i += sizeof(struct dirent)){
+        lseek(myfs, BLOCK_SIZE * blockOff + i, SEEK_SET);
+        read(myfs, (char*)&curr_entry, sizeof(struct dirent));
+        if(strcmp(curr_entry.name, filename) == 0){
+            lseek(myfs, BLOCK_SIZE + curr_entry.inode * sizeof(struct inode), SEEK_SET);
+            read(myfs, (char*)&parent_inode, sizeof(struct inode));
+            if(parent_inode.dir == dir){
+                if(dir == 0) printf("Error: The file %s already exists\n", filename);
+                else printf("Error: The directory %s already exists\n", filename);
+                return -1;
+            } 
+        }
+    }
+
+    lseek(myfs, BLOCK_SIZE * blockOff + size, SEEK_SET);
+    curr_entry.namelen = strlen(filename);
+    strcpy(curr_entry.name, filename);
+    curr_entry.inode = node;
+    write(myfs, (char*)&curr_entry, sizeof(struct dirent));
+
+    parent_inode.size += sizeof(struct dirent);
+    lseek(myfs, BLOCK_SIZE + directory_inode * sizeof(struct inode), SEEK_SET);
+    write(myfs, (char*)&parent_inode, sizeof(struct inode));
+
+    return 0;
+}
+
 // ------------------------------ Create File ------------------------------ //
 
 int CR(char* filename, int size){
@@ -214,11 +246,12 @@ int CR(char* filename, int size){
         printf("Error: File size exceeds maximum file size\n"); return -1;
     }
 
-    int available_block = findAvailableDataBlock(finode.blockptrs, blockcount);
-    if(available_block == -1) return -1;
+    if(findAvailableDataBlock(finode.blockptrs, blockcount) == -1) return -1;
 
     int available_inode = findAvailableInode();
     if(available_inode == -1) return -1;
+
+    if(assassin(filename, directory_inode, available_inode, 0) == -1) return -1;
     
     finode.dir = 0; // 0 since its a file, not a directory
     strcpy(finode.name, filename); // set the name of the file
@@ -267,6 +300,31 @@ int MV(char* srcname, char* dstname){
 // ------------------------------ Create Directory ------------------------------ //
 
 int CD(char* dirname){
+    int parent_inode = findParentInode(dirname);
+    if(parent_inode == -1) return -1;
+    
+    int block;
+    if(findAvailableDataBlock(&block, 1) == -1) return -1;
+
+    int available_inode = findAvailableInode();
+    if(available_inode == -1) return -1;
+
+    if(assassin(dirname, parent_inode, available_inode, 1) == -1) return -1;
+
+    struct inode directory_inode;
+    directory_inode.dir = 1; // 1 since its a directory, not a file
+    strcpy(directory_inode.name, dirname); // set the name of the directory
+    directory_inode.size = 0; // 0 since its an empty directry for now
+    directory_inode.used = 1; // yes it is in use
+    directory_inode.rsvd = 0; // no it is not reserved for future use
+
+    char c = (char)1;
+    lseek(myfs, block, SEEK_SET);
+    write(myfs, &c, 1);
+
+    lseek(myfs, NUM_BLOCKS + available_inode * sizeof(struct inode), SEEK_SET);
+    write(myfs, (char*)&directory_inode, sizeof(struct inode));
+
     return 0;
 }
 
