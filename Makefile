@@ -1,5 +1,6 @@
-backup:
-	cp filesystem.c backup.c
+# File System 1
+back:
+	cp filesystem.c backup_perf.c
 
 build:
 	gcc -o myfs.out filesystem.c
