@@ -1,3 +1,8 @@
-LL
-CR file1 128
+CD /home
+CR /home/og 128
+CD /home/user
+CR /home/user/u_file 128
+CR /home/file 128
+DL /home/file
+DD /home/user
 LL
