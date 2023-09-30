@@ -1,12 +1,12 @@
-# File System 1
+# File System 
 back:
-	cp filesystem.c backup_perf.c
+	cp filesystem.c backup.c
 
 build:
 	gcc -o myfs.out filesystem.c
 
 run:
-	./myfs.out test.txt
+	./myfs.out sampleinput.txt
 
 clean:
 	rm -rf myfs
